@@ -1,24 +1,24 @@
-//
-//  ContentView.swift
-//  GhostPoster
-//
-//  Created by 岡本奨 on 2026/08/09.
-//
-
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+    @StateObject private var settings = GhostSettings()
 
-#Preview {
-    ContentView()
+    var body: some View {
+        NavigationStack {
+            List {
+                NavigationLink {
+                    DraftPreviewView(settings: settings)
+                } label: {
+                    Label("投稿テスト", systemImage: "doc.text")
+                }
+
+                NavigationLink {
+                    SettingsView(settings: settings)
+                } label: {
+                    Label("Settings", systemImage: "gearshape")
+                }
+            }
+            .navigationTitle("GhostPoster")
+        }
+    }
 }
