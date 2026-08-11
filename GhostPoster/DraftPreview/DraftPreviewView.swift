@@ -258,7 +258,20 @@ struct DraftPreviewView: View {
                 guard let baseURL = settings.validatedGhostURL else {
                     throw GhostError.invalidURL
                 }
-                let html = try MarkdownHTMLRenderer.render(post.markdown)
+                let referenceURL = MarkdownFormatter.referenceURL(
+                    from: referenceURLText
+                )
+                let bookmark: GhostBookmarkMetadata?
+                if let referenceURL {
+                    bookmark = await GhostBookmarkMetadataFetcher.fetch(for: referenceURL)
+                } else {
+                    bookmark = nil
+                }
+                let lexical = try GhostLexicalRenderer.render(
+                    markdownBody,
+                    bookmark: bookmark,
+                    referenceURL: referenceURL
+                )
                 let client = GhostClient(
                     baseURL: baseURL,
                     adminAPIKey: settings.adminAPIKey,
@@ -275,8 +288,9 @@ struct DraftPreviewView: View {
                 }
                 let created = try await client.createDraft(
                     title: post.title,
-                    html: html,
-                    featureImageURL: featureImageURL
+                    lexical: lexical,
+                    featureImageURL: featureImageURL,
+                    tags: []
                 )
                 createdPostURL = created.url.flatMap { URL(string: $0) }
                 resultMessage = "下書きを作成しました: \(created.title)"
