@@ -31,21 +31,23 @@ struct GhostClient: Sendable {
 
     func createDraft(
         title: String,
-        html: String,
-        featureImageURL: String? = nil
+        lexical: String,
+        featureImageURL: String? = nil,
+        tags: [String] = []
     ) async throws -> GhostPost {
         let payload = CreateGhostPostsRequest(
             posts: [
                 CreateGhostPost(
                     title: title,
-                    html: html,
+                    lexical: lexical,
                     status: "draft",
-                    featureImage: featureImageURL
+                    featureImage: featureImageURL,
+                    tags: tags.isEmpty ? nil : tags
                 )
             ]
         )
         let response: GhostPostsResponse = try await request(
-            path: "ghost/api/admin/posts/?source=html",
+            path: "ghost/api/admin/posts/",
             method: "POST",
             body: try JSONEncoder().encode(payload)
         )
