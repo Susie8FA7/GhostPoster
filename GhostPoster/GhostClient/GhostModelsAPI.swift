@@ -37,15 +37,17 @@ struct CreateGhostPostsRequest: Encodable {
 
 struct CreateGhostPost: Encodable {
     let title: String
-    let html: String
+    let lexical: String
     let status: String
     let featureImage: String?
+    let tags: [String]?
 
     enum CodingKeys: String, CodingKey {
         case title
-        case html
+        case lexical
         case status
         case featureImage = "feature_image"
+        case tags
     }
 }
 
