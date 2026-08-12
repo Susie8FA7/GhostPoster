@@ -2,7 +2,6 @@
 //  GhostPosterTests.swift
 //  GhostPosterTests
 //
-//  Created by 岡本奨 on 2026/08/09.
 //
 
 import Foundation
