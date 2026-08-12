@@ -38,8 +38,8 @@ struct GhostPosterShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: StartHandsFreePostingIntent(),
             phrases: [
-                "\(.applicationName)で音声下書きを作成",
-                "\(.applicationName)でGhost下書きを作成"
+                "\(.applicationName)でブログ下書き",
+                "\(.applicationName)で下書き投稿"
             ],
             shortTitle: "ハンズフリー投稿",
             systemImageName: "waveform"
