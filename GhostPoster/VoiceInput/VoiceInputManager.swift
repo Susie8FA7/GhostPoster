@@ -109,7 +109,7 @@ final class VoiceInputManager: ObservableObject {
             "タイトル", "本文", "見出し", "小見出し", "段落",
             "概要", "要約", "結論", "補足", "関連記事",
             "箇条書き", "引用", "リンク", "タグ",
-            "句点", "読点", "改行",
+            "句点", "読点", "改行", "半角スペース",
 
             // Ghost投稿で頻出する固有語
             "Ghost", "Ghost Admin API", "GhostPoster",

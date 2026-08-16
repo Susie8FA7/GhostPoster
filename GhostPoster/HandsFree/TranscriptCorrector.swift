@@ -9,6 +9,7 @@ protocol TranscriptCorrecting {
 struct JapaneseTranscriptCorrector: TranscriptCorrecting {
     func correct(_ transcript: String) -> String {
         transcript
+            .replacingOccurrences(of: "半角スペース", with: " ")
             .replacingOccurrences(of: "　", with: " ")
             .replacingOccurrences(of: #"[ \t]+"#, with: " ", options: .regularExpression)
             .replacingOccurrences(of: #"\s+([、。！？])"#, with: "$1", options: .regularExpression)
