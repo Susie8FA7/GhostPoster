@@ -22,6 +22,22 @@ enum MarkdownHTMLRenderer {
             throw MarkdownRenderError.encodingFailed
         }
 
+        // Cocoa HTML Writerはhtml/head/style/bodyを含む完全な文書を生成します。
+        // Ghostのsource=htmlには本文フラグメントだけを渡し、段落タグが
+        // Ghost側の変換で一つにまとめられないようにします。
+        html = bodyFragment(from: html)
+        html = html.replacingOccurrences(
+            of: #"<span\b[^>]*>"#,
+            with: "",
+            options: .regularExpression
+        )
+        html = html.replacingOccurrences(of: "</span>", with: "")
+        html = html.replacingOccurrences(
+            of: #"\sclass="[^"]*""#,
+            with: "",
+            options: .regularExpression
+        )
+
         // AttributedStringからHTMLへ変換すると段落間の空行が失われるため、
         // 参考URLセクションの区切りはHTMLとして明示します。
         html = html.replacingOccurrences(
@@ -29,6 +45,19 @@ enum MarkdownHTMLRenderer {
             with: "<br><br>参考URL："
         )
         return html
+    }
+
+    private static func bodyFragment(from html: String) -> String {
+        guard let bodyStart = html.range(of: "<body>"),
+              let bodyEnd = html.range(
+                of: "</body>",
+                range: bodyStart.upperBound..<html.endIndex
+              ) else {
+            return html
+        }
+
+        return String(html[bodyStart.upperBound..<bodyEnd.lowerBound])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Markdownでは単独改行が空白として扱われるため、行末へ半角空白2個を
