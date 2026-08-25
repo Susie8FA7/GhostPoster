@@ -16,47 +16,47 @@ enum Guide01StatusPresenter {
         case .title:
             Guide01StatusMessage(
                 title: "タイトル入力",
-                content: "iPhoneに話してください"
+                content: "タイトルを話してください"
             )
         case .titleReview:
             Guide01StatusMessage(
                 title: "タイトルを入力しました",
-                content: "確定・修正"
+                content: "タイトルを確定、または修正"
             )
         case .body:
             Guide01StatusMessage(
                 title: "本文入力",
-                content: "iPhoneに話してください"
+                content: "本文を話してください"
             )
         case .bodyReview:
             Guide01StatusMessage(
                 title: "本文を入力しました",
-                content: "追加・確定"
+                content: "本文を追加、または確定"
             )
         case .referenceURL:
             Guide01StatusMessage(
                 title: "参考URL入力",
-                content: "URLを話す・なし"
+                content: "参考URLを話す、またはなし"
             )
         case .referenceURLReview:
             Guide01StatusMessage(
                 title: "参考URL",
-                content: "設定しました"
+                content: "参考URLを設定しました"
             )
         case .tags:
             Guide01StatusMessage(
                 title: "タグ入力",
-                content: "タグを話す・タグなし"
+                content: "タグを話す、またはタグなし"
             )
         case .tagsReview:
             Guide01StatusMessage(
                 title: "タグ",
-                content: "設定しました"
+                content: "タグを設定しました"
             )
         case .confirmation:
             Guide01StatusMessage(
                 title: "最終確認",
-                content: "投稿・読み上げ・キャンセル"
+                content: "投稿、読み上げ、またはキャンセル"
             )
         case .posting:
             Guide01StatusMessage(

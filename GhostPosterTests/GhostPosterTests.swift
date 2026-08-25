@@ -86,15 +86,15 @@ struct GhostPosterTests {
 
         #expect(title == Guide01StatusMessage(
             title: "タイトルを入力しました",
-            content: "確定・修正"
+            content: "タイトルを確定、または修正"
         ))
         #expect(body == Guide01StatusMessage(
             title: "本文を入力しました",
-            content: "追加・確定"
+            content: "本文を追加、または確定"
         ))
         #expect(confirmation == Guide01StatusMessage(
             title: "最終確認",
-            content: "投稿・読み上げ・キャンセル"
+            content: "投稿、読み上げ、またはキャンセル"
         ))
     }
 

@@ -125,11 +125,18 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
     }
 
     private func configureDisplay() {
-        let data = guide01NotificationDisplayTime(seconds: 60)
-        if !data.isEmpty {
+        let data = guide01NotificationDisplayTime(seconds: 120)
+        if !data.isEmpty, commandCharacteristic != nil {
             write(data, to: commandCharacteristic)
-        }
-        if let pendingMessage {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                guard let self,
+                      self.shouldBeActive,
+                      self.state == .ready,
+                      let pendingMessage = self.pendingMessage else { return }
+                self.display(pendingMessage)
+            }
+        } else if let pendingMessage {
             display(pendingMessage)
         }
     }
