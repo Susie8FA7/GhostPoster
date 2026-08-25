@@ -40,12 +40,14 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
     private var peripheral: CBPeripheral?
     private var messageCharacteristic: CBCharacteristic?
     private var commandCharacteristic: CBCharacteristic?
+    private var gifTextDisplayCharacteristic: CBCharacteristic?
     private var shouldBeActive = false
     private var pendingMessage: Guide01StatusMessage?
 
     private let serviceUUID = CBUUID(string: Guide01UUIDs.service)
     private let messageUUID = CBUUID(string: Guide01UUIDs.msgNotify)
     private let commandUUID = CBUUID(string: Guide01UUIDs.cmd)
+    private let gifTextDisplayUUID = CBUUID(string: Guide01UUIDs.gifTextDisplay)
 
     override init() {
         super.init()
@@ -62,7 +64,16 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
         central.stopScan()
         pendingMessage = nil
         if let peripheral {
-            central.cancelPeripheralConnection(peripheral)
+            if gifTextDisplayCharacteristic != nil {
+                write(guide01GifTextClosePage(), to: gifTextDisplayCharacteristic)
+                Task { @MainActor [weak self, weak peripheral] in
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                    guard let self, let peripheral else { return }
+                    self.central.cancelPeripheralConnection(peripheral)
+                }
+            } else {
+                central.cancelPeripheralConnection(peripheral)
+            }
         } else {
             state = .idle
         }
@@ -80,6 +91,25 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
     func display(_ message: Guide01StatusMessage) {
         pendingMessage = message
         guard state == .ready else { return }
+
+        if gifTextDisplayCharacteristic != nil {
+            let item = Guide01DisplayItem(
+                layerId: 0,
+                type: Guide01GifText.elementTypeText,
+                x: Guide01GifText.posCenter,
+                y: Guide01GifText.posCenter,
+                fontSize: 32,
+                text: message.displayText
+            )
+            let data = guide01GifTextDisplayElements(
+                showStatusBar: true,
+                items: [item]
+            )
+            if !data.isEmpty {
+                write(data, to: gifTextDisplayCharacteristic)
+                return
+            }
+        }
 
         let data = guide01Notification(
             name: "GhostPoster",
@@ -125,6 +155,13 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
     }
 
     private func configureDisplay() {
+        if gifTextDisplayCharacteristic != nil {
+            if let pendingMessage {
+                display(pendingMessage)
+            }
+            return
+        }
+
         let data = guide01NotificationDisplayTime(seconds: 120)
         if !data.isEmpty, commandCharacteristic != nil {
             write(data, to: commandCharacteristic)
@@ -154,6 +191,7 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
         peripheral = nil
         messageCharacteristic = nil
         commandCharacteristic = nil
+        gifTextDisplayCharacteristic = nil
     }
 }
 
@@ -226,7 +264,7 @@ extension Guide01ConnectionManager: CBPeripheralDelegate {
         }
         for service in services {
             peripheral.discoverCharacteristics(
-                [messageUUID, commandUUID],
+                [messageUUID, commandUUID, gifTextDisplayUUID],
                 for: service
             )
         }
@@ -248,12 +286,15 @@ extension Guide01ConnectionManager: CBPeripheralDelegate {
                 messageCharacteristic = characteristic
             case commandUUID:
                 commandCharacteristic = characteristic
+            case gifTextDisplayUUID:
+                gifTextDisplayCharacteristic = characteristic
             default:
                 break
             }
         }
 
-        guard messageCharacteristic != nil else {
+        guard gifTextDisplayCharacteristic != nil
+                || messageCharacteristic != nil else {
             state = .failed("GUIDE01の表示機能が見つかりません")
             return
         }

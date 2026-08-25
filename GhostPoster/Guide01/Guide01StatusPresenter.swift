@@ -3,6 +3,10 @@ import Foundation
 struct Guide01StatusMessage: Equatable {
     let title: String
     let content: String
+
+    var displayText: String {
+        "\(title)\n\(content)"
+    }
 }
 
 enum Guide01StatusPresenter {

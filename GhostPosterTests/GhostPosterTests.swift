@@ -96,6 +96,7 @@ struct GhostPosterTests {
             title: "最終確認",
             content: "投稿、読み上げ、またはキャンセル"
         ))
+        #expect(title.displayText == "タイトルを入力しました\nタイトルを確定、または修正")
     }
 
 }
