@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* Guide01SDK in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000004 /* Guide01SDK */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		9C9017F430280AC900C425F3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000001 /* Guide01SDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = GhostPoster;
 			packageProductDependencies = (
+				A10000000000000000000004 /* Guide01SDK */,
 			);
 			productName = GhostPoster;
 			productReference = 9C9017E630280AC900C425F3 /* GhostPoster.app */;
@@ -197,6 +203,9 @@
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9C9017E730280AC900C425F3 /* Products */;
+			packageReferences = (
+				A10000000000000000000003 /* XCLocalSwiftPackageReference "Vendor/Guide01/ios/Guide01SDK" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -404,6 +413,7 @@
 				INFOPLIST_KEY_CFBundleSpokenName = "ゴーストポスター";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ハンズフリー投稿と音声入力にマイクを使用します。";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "ハンズフリー投稿の状態をGUIDE01へ表示するためBluetoothを使用します。";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "話したタイトルや本文を文字に変換するため音声認識を使用します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -441,6 +451,7 @@
 				INFOPLIST_KEY_CFBundleSpokenName = "ゴーストポスター";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ハンズフリー投稿と音声入力にマイクを使用します。";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "ハンズフリー投稿の状態をGUIDE01へ表示するためBluetoothを使用します。";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "話したタイトルや本文を文字に変換するため音声認識を使用します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -588,6 +599,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A10000000000000000000003 /* XCLocalSwiftPackageReference "Vendor/Guide01/ios/Guide01SDK" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Vendor/Guide01/ios/Guide01SDK;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10000000000000000000004 /* Guide01SDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Guide01SDK;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 9C9017DE30280AC800C425F3 /* Project object */;
 }

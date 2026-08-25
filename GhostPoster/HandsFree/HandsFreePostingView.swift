@@ -4,6 +4,7 @@ struct HandsFreePostingView: View {
     @ObservedObject var settings: GhostSettings
     let startsAutomatically: Bool
     @StateObject private var session = HandsFreeSession()
+    @StateObject private var guide01 = Guide01ConnectionManager()
     @State private var resultURL: URL?
 
     var body: some View {
@@ -30,6 +31,20 @@ struct HandsFreePostingView: View {
                 } else if session.state != .posting {
                     Button("キャンセル", role: .destructive) {
                         session.cancel()
+                    }
+                }
+            }
+
+            Section("GUIDE01") {
+                LabeledContent("接続", value: guide01.state.label)
+                if case .failed(let message) = guide01.state {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                if guide01.state.canRetry {
+                    Button("GUIDE01へ再接続") {
+                        guide01.retry()
                     }
                 }
             }
@@ -66,11 +81,17 @@ struct HandsFreePostingView: View {
         .onChange(of: session.shouldPost) { _, shouldPost in
             if shouldPost { createDraft() }
         }
+        .onChange(of: session.state) { _, state in
+            guide01.display(Guide01StatusPresenter.message(for: state))
+        }
         .onAppear {
+            guide01.display(Guide01StatusPresenter.message(for: session.state))
+            guide01.start()
             if startsAutomatically { session.start() }
         }
         .onDisappear {
             session.voiceInput.stop()
+            guide01.stop()
         }
     }
 
