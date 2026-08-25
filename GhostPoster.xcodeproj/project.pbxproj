@@ -610,6 +610,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		A10000000000000000000004 /* Guide01SDK */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = A10000000000000000000003 /* XCLocalSwiftPackageReference "Vendor/Guide01/ios/Guide01SDK" */;
 			productName = Guide01SDK;
 		};
 /* End XCSwiftPackageProductDependency section */
