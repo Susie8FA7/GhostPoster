@@ -79,4 +79,24 @@ struct GhostPosterTests {
         #expect(nodes.contains { $0["type"] as? String == "bookmark" } == false)
     }
 
+    @Test func guide01StatusDoesNotExposeRecognizedContent() {
+        let title = Guide01StatusPresenter.message(for: .titleReview)
+        let body = Guide01StatusPresenter.message(for: .bodyReview)
+        let confirmation = Guide01StatusPresenter.message(for: .confirmation)
+
+        #expect(title == Guide01StatusMessage(
+            title: "タイトルを入力しました",
+            content: "タイトルを確定、または修正"
+        ))
+        #expect(body == Guide01StatusMessage(
+            title: "本文を入力しました",
+            content: "本文を追加、または確定"
+        ))
+        #expect(confirmation == Guide01StatusMessage(
+            title: "最終確認",
+            content: "投稿、読み上げ、またはキャンセル"
+        ))
+        #expect(title.displayText == "タイトルを入力しました\nタイトルを確定、または修正")
+    }
+
 }

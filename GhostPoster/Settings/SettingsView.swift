@@ -118,6 +118,17 @@ struct SettingsView: View {
                     Text("Admin API KeyとCloudflare Accessの認証情報を入力してください。")
                 }
             }
+
+            Section("Third-Party Licenses") {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("GUIDE01 SDK")
+                        .font(.headline)
+                    Text("Protocol library 2.0.0")
+                    Text("Copyright 2026 HappyLifeCreators K.K.")
+                    Text("Apache License 2.0")
+                }
+                .font(.footnote)
+            }
         }
         .navigationTitle("Settings")
     }

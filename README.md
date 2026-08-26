@@ -4,9 +4,10 @@ Ghost Admin APIを使って、iPhoneからMarkdown記事を下書き投稿する
 
 ## セットアップ
 
-1. `GhostPoster.xcodeproj` をXcodeで開きます。
-2. Signing & Capabilitiesで自分のDevelopment TeamとBundle Identifierを設定します。
-3. アプリのSettings画面で次の値を入力します。
+1. `git submodule update --init --recursive`を実行します。
+2. `GhostPoster.xcodeproj` をXcodeで開きます。
+3. Signing & Capabilitiesで自分のDevelopment TeamとBundle Identifierを設定します。
+4. アプリのSettings画面で次の値を入力します。
    - GhostサイトURL
    - Ghost Admin API Key
    - Cloudflare Access Client ID
@@ -62,6 +63,14 @@ App ShortcutがiOSへ登録されている場合は、Siriから次のフレー�
 | `キャンセル` | ハンズフリー投稿を終了する |
 
 `読み上げ`ではURL文字列そのものは読み上げません。全文読み上げは最終確認時だけ実行できます。
+
+## GUIDE01状態表示（プロトタイプ）
+
+ハンズフリー投稿画面を開くと、周辺のGUIDE01へBluetoothで接続し、現在の投稿状態と次に利用できる音声コマンドを表示します。音声入力、音声認識、読み上げ、Ghost投稿は引き続きiPhoneが担当します。
+
+GUIDE01へ接続できない場合や投稿中に接続が切れた場合も、iPhone上のハンズフリー投稿は継続します。Phase 1ではタイトル、本文、参考URL、タグの実データをGUIDE01へ送信しません。
+
+GUIDE01 SDKはGit submoduleとして参照し、プロトコルライブラリ2.0.0（リビジョン`48914b6`）へ固定しています。ライセンスおよびクレジットは[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)を参照してください。
 
 ## Ghost下書きの形式
 

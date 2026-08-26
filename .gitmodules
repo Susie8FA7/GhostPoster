@@ -1,0 +1,3 @@
+[submodule "Vendor/Guide01"]
+	path = Vendor/Guide01
+	url = https://git.happylifecreators.com/guide-series-sdk/guide01.git
