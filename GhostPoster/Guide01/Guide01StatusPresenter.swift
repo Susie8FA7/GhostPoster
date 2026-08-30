@@ -5,6 +5,7 @@ struct Guide01StatusMessage: Equatable {
     let content: String
     var fontSize: UInt8 = 32
     var showsStatusBar = true
+    var highlightedTextFragments: [String] = []
 
     var displayText: String {
         "\(title)\n\(content)"
@@ -40,7 +41,8 @@ enum Guide01StatusPresenter {
                 content: lines[start..<(start + visibleContentLines)]
                     .joined(separator: "\n"),
                 fontSize: message.fontSize,
-                showsStatusBar: message.showsStatusBar
+                showsStatusBar: message.showsStatusBar,
+                highlightedTextFragments: message.highlightedTextFragments
             )
         }
     }
@@ -49,7 +51,9 @@ enum Guide01StatusPresenter {
         title: String,
         body: String,
         hasReferenceURL: Bool,
-        tags: [String]
+        tags: [String],
+        titleWasRefined: Bool = false,
+        bodyWasRefined: Bool = false
     ) -> Guide01StatusMessage {
         let urlSummary = hasReferenceURL ? "参考URLあり" : "参考URLなし"
         let tagSummary = tags.isEmpty ? "なし" : tags.joined(separator: "、")
@@ -66,7 +70,11 @@ enum Guide01StatusPresenter {
             \(tagSummary)
             """,
             fontSize: 20,
-            showsStatusBar: false
+            showsStatusBar: false,
+            highlightedTextFragments: [
+                titleWasRefined ? title : nil,
+                bodyWasRefined ? body : nil
+            ].compactMap { $0 }
         )
     }
 

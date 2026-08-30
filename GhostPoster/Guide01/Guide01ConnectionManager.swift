@@ -44,6 +44,7 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
     private var shouldBeActive = false
     private var pendingMessage: Guide01StatusMessage?
     private var scrollingTask: Task<Void, Never>?
+    private var keepAliveTask: Task<Void, Never>?
 
     private let serviceUUID = CBUUID(string: Guide01UUIDs.service)
     private let messageUUID = CBUUID(string: Guide01UUIDs.msgNotify)
@@ -64,6 +65,8 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
         shouldBeActive = false
         scrollingTask?.cancel()
         scrollingTask = nil
+        keepAliveTask?.cancel()
+        keepAliveTask = nil
         central.stopScan()
         pendingMessage = nil
         if let peripheral {
@@ -86,6 +89,8 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
         guard shouldBeActive else { return }
         scrollingTask?.cancel()
         scrollingTask = nil
+        keepAliveTask?.cancel()
+        keepAliveTask = nil
         if let peripheral {
             central.cancelPeripheralConnection(peripheral)
         }
@@ -96,7 +101,24 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
     func display(_ message: Guide01StatusMessage) {
         scrollingTask?.cancel()
         scrollingTask = nil
+        keepAliveTask?.cancel()
+        keepAliveTask = nil
         displayImmediately(message)
+    }
+
+    func displayKeepingAlive(_ message: Guide01StatusMessage) {
+        scrollingTask?.cancel()
+        scrollingTask = nil
+        keepAliveTask?.cancel()
+        displayImmediately(message)
+
+        keepAliveTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(10))
+                guard !Task.isCancelled, let self else { return }
+                self.displayImmediately(message)
+            }
+        }
     }
 
     func displayScrolling(
@@ -104,6 +126,8 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
         completionMessage: Guide01StatusMessage? = nil
     ) {
         scrollingTask?.cancel()
+        keepAliveTask?.cancel()
+        keepAliveTask = nil
 
         let messages = Guide01StatusPresenter.scrollingMessages(for: message)
         displayImmediately(messages[0], usesExplicitLineLayout: true)
@@ -185,12 +209,19 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
         let firstY = max(0, (Int(Guide01GifText.contentHeight) - totalHeight) / 2)
 
         return lines.enumerated().map { index, line in
-            Guide01DisplayItem(
+            let isHighlighted = !line.isEmpty
+                && message.highlightedTextFragments.contains { fragment in
+                    fragment.contains(line)
+                }
+            return Guide01DisplayItem(
                 layerId: UInt8(index),
                 type: Guide01GifText.elementTypeText,
                 x: Guide01GifText.posCenter,
                 y: UInt16(firstY + index * lineHeight),
                 fontSize: message.fontSize,
+                colorR: 255,
+                colorG: isHighlighted ? 210 : 255,
+                colorB: isHighlighted ? 0 : 255,
                 text: line.isEmpty ? " " : line
             )
         }

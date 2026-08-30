@@ -16,6 +16,31 @@ struct GhostPosterTests {
         // https://developer.apple.com/documentation/testing
     }
 
+    @Test func transcriptCorrectorNormalizesSpokenJapaneseDate() {
+        let corrector = JapaneseTranscriptCorrector()
+
+        #expect(corrector.correct(
+            "今日は2026年8月30日日曜日です。"
+        ) == "今日は2026/08/30(日)です。")
+        #expect(corrector.correct(
+            "予定は２０２６年８月３１日月曜日です。"
+        ) == "予定は2026/08/31(月)です。")
+    }
+
+    @Test func transcriptCorrectorUsesCanonicalTechnologyNames() {
+        let corrector = JapaneseTranscriptCorrector()
+
+        #expect(corrector.correct(
+            "Appleインテリジェンスを試します。"
+        ) == "Apple Intelligenceを試します。")
+        #expect(corrector.correct(
+            "アップルインテリジェンスとFoundation Models"
+        ) == "Apple IntelligenceとFoundation Models")
+        #expect(corrector.correct(
+            "ゴーストポスターからゴーストへ投稿してガイドゼロワンに表示"
+        ) == "ゴーストポスターからGhostへ投稿してGUIDE01に表示")
+    }
+
     @Test func lexicalRendererPreservesLinesAsParagraphs() throws {
         let lexical = try GhostLexicalRenderer.render("一行目\n二行目\n\n四行目")
         let data = try #require(lexical.data(using: .utf8))
@@ -121,6 +146,7 @@ struct GhostPosterTests {
         #expect(message.content.contains("https://") == false)
         #expect(message.fontSize == 20)
         #expect(message.showsStatusBar == false)
+        #expect(message.highlightedTextFragments.isEmpty)
 
         let messageWithoutOptionalContent = Guide01StatusPresenter.readAloudMessage(
             title: "タイトル",
@@ -174,6 +200,49 @@ struct GhostPosterTests {
 
         #expect(frames.count > 1)
         #expect(frames.allSatisfy { $0.displayText.utf8.count <= 400 })
+    }
+
+    @Test func guide01ReadAloudMessageMarksAIRefinedFields() {
+        let message = Guide01StatusPresenter.readAloudMessage(
+            title: "SwiftUIのテスト",
+            body: "一行目\n二行目",
+            hasReferenceURL: false,
+            tags: [],
+            titleWasRefined: true,
+            bodyWasRefined: true
+        )
+        let frames = Guide01StatusPresenter.scrollingMessages(
+            for: message,
+            charactersPerLine: 8,
+            visibleContentLines: 4
+        )
+
+        #expect(message.highlightedTextFragments == ["SwiftUIのテスト", "一行目\n二行目"])
+        #expect(frames.allSatisfy {
+            $0.highlightedTextFragments == message.highlightedTextFragments
+        })
+    }
+
+    @Test func foundationModelCorrectionRejectsLargeRewrites() {
+        #expect(FoundationModelTranscriptRefiner.isConservativeCorrection(
+            "SwiftUIについて試しました。",
+            of: "スイフトUIについて試しました。"
+        ))
+        #expect(FoundationModelTranscriptRefiner.isConservativeCorrection(
+            "まったく別の長い文章へ全面的に書き直しました。重要な情報も追加します。",
+            of: "短い原文です。"
+        ) == false)
+    }
+
+    @Test func foundationModelCorrectionPreservesNumbersAndLineBreaks() {
+        #expect(FoundationModelTranscriptRefiner.isConservativeCorrection(
+            "iPhone 17を購入しました。",
+            of: "iPhone 16を購入しました。"
+        ) == false)
+        #expect(FoundationModelTranscriptRefiner.isConservativeCorrection(
+            "一行目 二行目",
+            of: "一行目\n二行目"
+        ) == false)
     }
 
 }
