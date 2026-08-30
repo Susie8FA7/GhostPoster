@@ -19,11 +19,14 @@ final class FoundationModelTranscriptRefiner: TranscriptRefining {
         model: model,
         instructions: """
         あなたは日本語音声認識結果の校正器です。
-        明らかな誤認識だけを修正してください。
+        前後の文脈を読み、音声認識に由来する同音異義語、漢字変換、固有名詞、表記揺れを修正してください。
+        文脈からほぼ確実に判断できる短い語の欠落は補ってかまいません。
         意味、文体、語調、情報量、改行は変更しません。
         要約、加筆、言い換え、表現改善はしません。
         YYYY/MM/DD(曜)形式の日付は変更しません。
-        判断できない箇所は原文を維持してください。
+        スポーツの記事では「勝敗」「3タテ」「マジック点灯」など、文脈に合う通常の表現を使います。
+        マジックナンバーは文脈に応じて「M21」のように表記します。
+        文脈から判断できない箇所だけ原文を維持してください。
         """
     )
 
@@ -39,7 +42,7 @@ final class FoundationModelTranscriptRefiner: TranscriptRefining {
         do {
             let response = try await session.respond(
                 to: """
-                次の音声認識結果を限定的に校正してください。
+                次の音声認識結果を、意味や文体を維持したまま文脈に沿って校正してください。
                 説明や引用符を付けず、校正後の文章だけを返してください。
 
                 \(transcript)

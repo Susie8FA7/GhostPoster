@@ -8,7 +8,8 @@ enum TranscriptCorrectionDictionary {
         "アップルインテリジェンス": "Apple Intelligence",
         "ゴーストポスター": "ゴーストポスター",
         "ゴースト": "Ghost",
-        "ガイドゼロワン": "GUIDE01"
+        "ガイドゼロワン": "GUIDE01",
+        "マジックが転倒": "マジックが点灯"
     ]
 
     static func apply(to transcript: String) -> String {

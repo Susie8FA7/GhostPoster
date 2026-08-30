@@ -6,6 +6,7 @@ struct Guide01StatusMessage: Equatable {
     var fontSize: UInt8 = 32
     var showsStatusBar = true
     var highlightedTextFragments: [String] = []
+    var warningTextFragments: [String] = []
 
     var displayText: String {
         "\(title)\n\(content)"
@@ -42,7 +43,8 @@ enum Guide01StatusPresenter {
                     .joined(separator: "\n"),
                 fontSize: message.fontSize,
                 showsStatusBar: message.showsStatusBar,
-                highlightedTextFragments: message.highlightedTextFragments
+                highlightedTextFragments: message.highlightedTextFragments,
+                warningTextFragments: message.warningTextFragments
             )
         }
     }
@@ -75,6 +77,40 @@ enum Guide01StatusPresenter {
                 titleWasRefined ? title : nil,
                 bodyWasRefined ? body : nil
             ].compactMap { $0 }
+        )
+    }
+
+    static func correctionMessage(
+        changes: [TranscriptChange]
+    ) -> Guide01StatusMessage {
+        guard !changes.isEmpty else {
+            return Guide01StatusMessage(
+                title: "補正内容",
+                content: "補正による変更なし",
+                fontSize: 20,
+                showsStatusBar: false
+            )
+        }
+
+        let before = changes.map(\.beforeSnippet)
+        let after = changes.map(\.afterSnippet)
+        let sections = zip(before, after).enumerated().map { index, pair in
+            """
+            補正 \(index + 1)/\(changes.count)
+            変更前
+            \(pair.0)
+            変更後
+            \(pair.1)
+            """
+        }
+
+        return Guide01StatusMessage(
+            title: "補正内容",
+            content: sections.joined(separator: "\n"),
+            fontSize: 20,
+            showsStatusBar: false,
+            highlightedTextFragments: after,
+            warningTextFragments: before
         )
     }
 

@@ -129,6 +129,14 @@ final class VoiceInputManager: ObservableObject {
             "SwiftUI",
             "Apple Intelligence",
             "Foundation Models",
+            "阪神タイガース",
+            "巨人",
+            "勝敗",
+            "3連戦",
+            "3タテ",
+            "マジック点灯",
+            "マジックナンバー",
+            "M21",
             "iOS",
             "macOS"
         ] + immediatePhrases.sorted()

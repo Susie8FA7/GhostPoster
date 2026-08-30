@@ -95,13 +95,8 @@ struct HandsFreePostingView: View {
         }
         .onChange(of: session.readAloudRequestID) { _, _ in
             guide01.displayScrolling(
-                Guide01StatusPresenter.readAloudMessage(
-                    title: session.title,
-                    body: session.body,
-                    hasReferenceURL: !session.referenceURL.isEmpty,
-                    tags: session.tags,
-                    titleWasRefined: session.titleWasAIRefined,
-                    bodyWasRefined: session.bodyWasAIRefined
+                Guide01StatusPresenter.correctionMessage(
+                    changes: session.correctionChanges
                 ),
                 completionMessage: Guide01StatusPresenter.message(for: .confirmation)
             )

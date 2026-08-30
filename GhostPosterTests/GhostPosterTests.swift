@@ -41,6 +41,19 @@ struct GhostPosterTests {
         ) == "ゴーストポスターからGhostへ投稿してGUIDE01に表示")
     }
 
+    @Test func transcriptCorrectorNormalizesBaseballTerms() {
+        let corrector = JapaneseTranscriptCorrector()
+        let recognized = """
+        今週の阪神タイガースは4勝2杯で、マジックが転倒。
+        巨人3連戦は3でマジックが21
+        """
+
+        #expect(corrector.correct(recognized) == """
+        今週の阪神タイガースは4勝2敗で、マジックが点灯。
+        巨人3連戦は3タテでM21
+        """)
+    }
+
     @Test func lexicalRendererPreservesLinesAsParagraphs() throws {
         let lexical = try GhostLexicalRenderer.render("一行目\n二行目\n\n四行目")
         let data = try #require(lexical.data(using: .utf8))
@@ -243,6 +256,31 @@ struct GhostPosterTests {
             "一行目 二行目",
             of: "一行目\n二行目"
         ) == false)
+    }
+
+    @Test func transcriptChangeShowsOnlyChangedContext() {
+        let change = TranscriptChange(
+            scope: .body,
+            before: "今日はAppleインテリジェンスを試します。",
+            after: "今日はApple Intelligenceを試します。"
+        )
+
+        #expect(change.beforeSnippet.contains("Appleインテリジェンス"))
+        #expect(change.afterSnippet.contains("Apple Intelligence"))
+    }
+
+    @Test func guide01CorrectionMessageShowsBeforeAndAfterOnly() {
+        let change = TranscriptChange(
+            scope: .body,
+            before: "Appleインテリジェンス",
+            after: "Apple Intelligence"
+        )
+        let message = Guide01StatusPresenter.correctionMessage(changes: [change])
+
+        #expect(message.content.contains("変更前\nAppleインテリジェンス"))
+        #expect(message.content.contains("変更後\nApple Intelligence"))
+        #expect(message.warningTextFragments == ["Appleインテリジェンス"])
+        #expect(message.highlightedTextFragments == ["Apple Intelligence"])
     }
 
 }

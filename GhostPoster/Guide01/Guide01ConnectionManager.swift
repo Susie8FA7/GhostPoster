@@ -213,6 +213,10 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
                 && message.highlightedTextFragments.contains { fragment in
                     fragment.contains(line)
                 }
+            let isWarning = !line.isEmpty
+                && message.warningTextFragments.contains { fragment in
+                    fragment.contains(line)
+                }
             return Guide01DisplayItem(
                 layerId: UInt8(index),
                 type: Guide01GifText.elementTypeText,
@@ -220,8 +224,8 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
                 y: UInt16(firstY + index * lineHeight),
                 fontSize: message.fontSize,
                 colorR: 255,
-                colorG: isHighlighted ? 210 : 255,
-                colorB: isHighlighted ? 0 : 255,
+                colorG: isWarning ? 96 : (isHighlighted ? 210 : 255),
+                colorB: isWarning ? 96 : (isHighlighted ? 0 : 255),
                 text: line.isEmpty ? " " : line
             )
         }

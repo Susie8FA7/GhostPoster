@@ -14,9 +14,10 @@ struct JapaneseTranscriptCorrector: TranscriptCorrecting {
             .replacingOccurrences(of: #"[ \t]+"#, with: " ", options: .regularExpression)
             .replacingOccurrences(of: #"\s+([、。！？])"#, with: "$1", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return TranscriptCorrectionDictionary.apply(
+        let dictionaryCorrected = TranscriptCorrectionDictionary.apply(
             to: normalizeSpokenDates(in: normalized)
         )
+        return normalizeBaseballTerms(in: dictionaryCorrected)
     }
 
     private func normalizeSpokenDates(in text: String) -> String {
@@ -60,5 +61,24 @@ struct JapaneseTranscriptCorrector: TranscriptCorrecting {
             reverse: false
         )
         return normalized.flatMap(Int.init)
+    }
+
+    private func normalizeBaseballTerms(in text: String) -> String {
+        text
+            .replacingOccurrences(
+                of: #"([0-9０-９]+)勝([0-9０-９]+)杯"#,
+                with: "$1勝$2敗",
+                options: .regularExpression
+            )
+            .replacingOccurrences(
+                of: #"([0-9０-９]+)連戦は([0-9０-９]+)で(?=マジック)"#,
+                with: "$1連戦は$2タテで",
+                options: .regularExpression
+            )
+            .replacingOccurrences(
+                of: #"マジックが([0-9０-９]+)"#,
+                with: "M$1",
+                options: .regularExpression
+            )
     }
 }

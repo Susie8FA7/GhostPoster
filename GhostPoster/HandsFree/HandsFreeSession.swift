@@ -16,6 +16,7 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
     @Published private(set) var titleWasAIRefined = false
     @Published private(set) var bodyWasAIRefined = false
     @Published private(set) var isRefiningTranscript = false
+    @Published private(set) var correctionChanges: [TranscriptChange] = []
 
     let voiceInput = VoiceInputManager()
     private let synthesizer = AVSpeechSynthesizer()
@@ -67,7 +68,9 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
                 then: .beginTags
             )
         case .tags:
-            tags = parseTags(transcriptCorrector.correct(transcript))
+            let corrected = transcriptCorrector.correct(transcript)
+            recordCorrection(from: transcript, to: corrected, scope: .tags)
+            tags = parseTags(corrected)
             announce(
                 to: .tagsReview,
                 message: "タグを設定しました。",
@@ -83,6 +86,7 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
     private func refineTitle(_ transcript: String) {
         voiceInput.stop()
         let mechanicallyCorrected = transcriptCorrector.correct(transcript)
+        recordCorrection(from: transcript, to: mechanicallyCorrected, scope: .title)
         title = mechanicallyCorrected
         titleWasAIRefined = mechanicallyCorrected != transcript
         move(
@@ -96,6 +100,7 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
         statusMessage = "本文を補正しています。"
         isRefiningTranscript = true
         let mechanicallyCorrected = transcriptCorrector.correct(transcript)
+        recordCorrection(from: transcript, to: mechanicallyCorrected, scope: .body)
         let appendsToExistingBody = isAppendingBody && !body.isEmpty
         isAppendingBody = false
         Task { @MainActor [weak self] in
@@ -106,6 +111,11 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
                 return
             }
             self.isRefiningTranscript = false
+            self.recordCorrection(
+                from: mechanicallyCorrected,
+                to: refinement.text,
+                scope: .body
+            )
             self.body = appendsToExistingBody
                 ? self.body + "\n" + refinement.text
                 : refinement.text
@@ -117,6 +127,17 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
                 prompt: "本文を入力しました。追加しますか、確定しますか？"
             )
         }
+    }
+
+    private func recordCorrection(
+        from before: String,
+        to after: String,
+        scope: TranscriptChange.Scope
+    ) {
+        guard before != after else { return }
+        correctionChanges.append(
+            TranscriptChange(scope: scope, before: before, after: after)
+        )
     }
 
     private func accepts(_ purpose: VoiceRecognitionPurpose) -> Bool {
@@ -161,6 +182,7 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
         voiceInput.stop()
         synthesizer.stopSpeaking(at: .immediate)
         isRefiningTranscript = false
+        correctionChanges = []
         state = .idle
         shouldPost = false
         statusMessage = "キャンセルしました。"
@@ -191,6 +213,7 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
         case .cancel:
             cancel()
         case .redoTitle:
+            correctionChanges.removeAll { $0.scope == .title }
             title = ""
             move(to: .title, prompt: "タイトルをもう一度どうぞ。")
         case .addBody:
@@ -279,9 +302,11 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
     private func reviseCurrentValue() -> Bool {
         switch state {
         case .titleReview:
+            correctionChanges.removeAll { $0.scope == .title }
             title = ""
             move(to: .title, prompt: "修正したタイトルをどうぞ。")
         case .bodyReview:
+            correctionChanges.removeAll { $0.scope == .body }
             isAppendingBody = false
             body = ""
             move(to: .body, prompt: "修正した本文をどうぞ。")
@@ -289,6 +314,7 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
             referenceURL = ""
             move(to: .referenceURL, prompt: "修正した参考URLをどうぞ。ない場合は、なし、と言ってください。")
         case .tagsReview:
+            correctionChanges.removeAll { $0.scope == .tags }
             tags = []
             move(to: .tags, prompt: "修正したタグをどうぞ。")
         default:
@@ -401,6 +427,7 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
         titleWasAIRefined = false
         bodyWasAIRefined = false
         isRefiningTranscript = false
+        correctionChanges = []
     }
 
     private func parseTags(_ transcript: String) -> [String] {
