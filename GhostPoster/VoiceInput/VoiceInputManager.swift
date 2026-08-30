@@ -112,7 +112,8 @@ final class VoiceInputManager: ObservableObject {
             "句点", "読点", "改行", "半角スペース",
 
             // Ghost投稿で頻出する固有語
-            "Ghost", "Ghost Admin API", "GhostPoster",
+            "Ghost", "Ghost Admin API", "GhostPoster", "ゴーストポスター",
+            "GUIDE01",
             "Markdown", "Feature Image", "下書き", "ブログ記事",
 
             // 数字・年月など誤認識しやすい表現（サンプル）
@@ -126,6 +127,16 @@ final class VoiceInputManager: ObservableObject {
             "GitHub",
             "Swift",
             "SwiftUI",
+            "Apple Intelligence",
+            "Foundation Models",
+            "阪神タイガース",
+            "巨人",
+            "勝敗",
+            "3連戦",
+            "3タテ",
+            "マジック点灯",
+            "マジックナンバー",
+            "M21",
             "iOS",
             "macOS"
         ] + immediatePhrases.sorted()

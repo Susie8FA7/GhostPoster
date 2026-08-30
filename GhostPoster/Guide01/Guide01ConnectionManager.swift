@@ -43,6 +43,8 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
     private var gifTextDisplayCharacteristic: CBCharacteristic?
     private var shouldBeActive = false
     private var pendingMessage: Guide01StatusMessage?
+    private var scrollingTask: Task<Void, Never>?
+    private var keepAliveTask: Task<Void, Never>?
 
     private let serviceUUID = CBUUID(string: Guide01UUIDs.service)
     private let messageUUID = CBUUID(string: Guide01UUIDs.msgNotify)
@@ -61,6 +63,10 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
 
     func stop() {
         shouldBeActive = false
+        scrollingTask?.cancel()
+        scrollingTask = nil
+        keepAliveTask?.cancel()
+        keepAliveTask = nil
         central.stopScan()
         pendingMessage = nil
         if let peripheral {
@@ -81,6 +87,10 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
 
     func retry() {
         guard shouldBeActive else { return }
+        scrollingTask?.cancel()
+        scrollingTask = nil
+        keepAliveTask?.cancel()
+        keepAliveTask = nil
         if let peripheral {
             central.cancelPeripheralConnection(peripheral)
         }
@@ -89,27 +99,92 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
     }
 
     func display(_ message: Guide01StatusMessage) {
+        scrollingTask?.cancel()
+        scrollingTask = nil
+        keepAliveTask?.cancel()
+        keepAliveTask = nil
+        displayImmediately(message)
+    }
+
+    func displayKeepingAlive(_ message: Guide01StatusMessage) {
+        scrollingTask?.cancel()
+        scrollingTask = nil
+        keepAliveTask?.cancel()
+        displayImmediately(message)
+
+        keepAliveTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(10))
+                guard !Task.isCancelled, let self else { return }
+                self.displayImmediately(message)
+            }
+        }
+    }
+
+    func displayScrolling(
+        _ message: Guide01StatusMessage,
+        completionMessage: Guide01StatusMessage? = nil
+    ) {
+        scrollingTask?.cancel()
+        keepAliveTask?.cancel()
+        keepAliveTask = nil
+
+        let messages = Guide01StatusPresenter.scrollingMessages(for: message)
+        displayImmediately(messages[0], usesExplicitLineLayout: true)
+        guard messages.count > 1 || completionMessage != nil else {
+            scrollingTask = nil
+            return
+        }
+
+        scrollingTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+
+            for message in messages.dropFirst() {
+                try? await Task.sleep(for: .milliseconds(2_400))
+                guard !Task.isCancelled else { return }
+                self.displayImmediately(message, usesExplicitLineLayout: true)
+            }
+            if let completionMessage {
+                try? await Task.sleep(for: .milliseconds(2_400))
+                guard !Task.isCancelled else { return }
+                self.displayImmediately(completionMessage)
+                self.scrollingTask = nil
+            } else {
+                self.scrollingTask = nil
+            }
+        }
+    }
+
+    private func displayImmediately(
+        _ message: Guide01StatusMessage,
+        usesExplicitLineLayout: Bool = false
+    ) {
         pendingMessage = message
         guard state == .ready else { return }
 
         if gifTextDisplayCharacteristic != nil {
-            let item = Guide01DisplayItem(
-                layerId: 0,
-                type: Guide01GifText.elementTypeText,
-                x: Guide01GifText.posCenter,
-                y: Guide01GifText.posCenter,
-                fontSize: 32,
-                text: message.displayText
-            )
+            let items = usesExplicitLineLayout
+                ? explicitLineItems(for: message)
+                : [Guide01DisplayItem(
+                    layerId: 0,
+                    type: Guide01GifText.elementTypeText,
+                    x: Guide01GifText.posCenter,
+                    y: Guide01GifText.posCenter,
+                    fontSize: message.fontSize,
+                    text: message.displayText
+                )]
             let data = guide01GifTextDisplayElements(
-                showStatusBar: true,
-                items: [item]
+                showStatusBar: message.showsStatusBar,
+                items: items
             )
             if !data.isEmpty {
                 write(data, to: gifTextDisplayCharacteristic)
                 return
             }
         }
+
+        // Read-aloud content must never be sent through the notification area.
+        guard !usesExplicitLineLayout else { return }
 
         let data = guide01Notification(
             name: "GhostPoster",
@@ -121,6 +196,39 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
             return
         }
         write(data, to: messageCharacteristic)
+    }
+
+    private func explicitLineItems(
+        for message: Guide01StatusMessage
+    ) -> [Guide01DisplayItem] {
+        let lines = message.displayText
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map(String.init)
+        let lineHeight = Int(message.fontSize) + 8
+        let totalHeight = lines.count * lineHeight
+        let firstY = max(0, (Int(Guide01GifText.contentHeight) - totalHeight) / 2)
+
+        return lines.enumerated().map { index, line in
+            let isHighlighted = !line.isEmpty
+                && message.highlightedTextFragments.contains { fragment in
+                    fragment.contains(line)
+                }
+            let isWarning = !line.isEmpty
+                && message.warningTextFragments.contains { fragment in
+                    fragment.contains(line)
+                }
+            return Guide01DisplayItem(
+                layerId: UInt8(index),
+                type: Guide01GifText.elementTypeText,
+                x: Guide01GifText.posCenter,
+                y: UInt16(firstY + index * lineHeight),
+                fontSize: message.fontSize,
+                colorR: 255,
+                colorG: isWarning ? 96 : (isHighlighted ? 210 : 255),
+                colorB: isWarning ? 96 : (isHighlighted ? 0 : 255),
+                text: line.isEmpty ? " " : line
+            )
+        }
     }
 
     private func connectIfPossible() {
@@ -157,7 +265,7 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
     private func configureDisplay() {
         if gifTextDisplayCharacteristic != nil {
             if let pendingMessage {
-                display(pendingMessage)
+                displayImmediately(pendingMessage)
             }
             return
         }
@@ -171,10 +279,10 @@ final class Guide01ConnectionManager: NSObject, ObservableObject {
                       self.shouldBeActive,
                       self.state == .ready,
                       let pendingMessage = self.pendingMessage else { return }
-                self.display(pendingMessage)
+                self.displayImmediately(pendingMessage)
             }
         } else if let pendingMessage {
-            display(pendingMessage)
+            displayImmediately(pendingMessage)
         }
     }
 

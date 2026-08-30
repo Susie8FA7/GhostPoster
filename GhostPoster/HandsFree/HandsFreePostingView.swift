@@ -84,6 +84,23 @@ struct HandsFreePostingView: View {
         .onChange(of: session.state) { _, state in
             guide01.display(Guide01StatusPresenter.message(for: state))
         }
+        .onChange(of: session.isRefiningTranscript) { _, isRefining in
+            guard isRefining else { return }
+            guide01.displayKeepingAlive(
+                Guide01StatusMessage(
+                    title: "本文補正",
+                    content: "本文を補正しています"
+                )
+            )
+        }
+        .onChange(of: session.readAloudRequestID) { _, _ in
+            guide01.displayScrolling(
+                Guide01StatusPresenter.correctionMessage(
+                    changes: session.correctionChanges
+                ),
+                completionMessage: Guide01StatusPresenter.message(for: .confirmation)
+            )
+        }
         .onAppear {
             guide01.display(Guide01StatusPresenter.message(for: session.state))
             guide01.start()

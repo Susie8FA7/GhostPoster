@@ -3,6 +3,10 @@ import Foundation
 struct Guide01StatusMessage: Equatable {
     let title: String
     let content: String
+    var fontSize: UInt8 = 32
+    var showsStatusBar = true
+    var highlightedTextFragments: [String] = []
+    var warningTextFragments: [String] = []
 
     var displayText: String {
         "\(title)\n\(content)"
@@ -10,6 +14,106 @@ struct Guide01StatusMessage: Equatable {
 }
 
 enum Guide01StatusPresenter {
+    static func scrollingMessages(
+        for message: Guide01StatusMessage,
+        charactersPerLine: Int = 18,
+        visibleContentLines: Int = 4
+    ) -> [Guide01StatusMessage] {
+        guard charactersPerLine > 0, visibleContentLines > 0 else {
+            return [message]
+        }
+
+        let lines = message.content
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .flatMap { line -> [String] in
+                let characters = Array(line)
+                guard !characters.isEmpty else { return [""] }
+                return stride(from: 0, to: characters.count, by: charactersPerLine)
+                    .map { start in
+                        String(characters[start..<min(start + charactersPerLine, characters.count)])
+                    }
+            }
+
+        guard lines.count > visibleContentLines else { return [message] }
+
+        return (0...(lines.count - visibleContentLines)).map { start in
+            Guide01StatusMessage(
+                title: message.title,
+                content: lines[start..<(start + visibleContentLines)]
+                    .joined(separator: "\n"),
+                fontSize: message.fontSize,
+                showsStatusBar: message.showsStatusBar,
+                highlightedTextFragments: message.highlightedTextFragments,
+                warningTextFragments: message.warningTextFragments
+            )
+        }
+    }
+
+    static func readAloudMessage(
+        title: String,
+        body: String,
+        hasReferenceURL: Bool,
+        tags: [String],
+        titleWasRefined: Bool = false,
+        bodyWasRefined: Bool = false
+    ) -> Guide01StatusMessage {
+        let urlSummary = hasReferenceURL ? "参考URLあり" : "参考URLなし"
+        let tagSummary = tags.isEmpty ? "なし" : tags.joined(separator: "、")
+
+        return Guide01StatusMessage(
+            title: "投稿内容",
+            content: """
+            タイトル
+            \(title)
+            本文
+            \(body)
+            \(urlSummary)
+            タグ
+            \(tagSummary)
+            """,
+            fontSize: 20,
+            showsStatusBar: false,
+            highlightedTextFragments: [
+                titleWasRefined ? title : nil,
+                bodyWasRefined ? body : nil
+            ].compactMap { $0 }
+        )
+    }
+
+    static func correctionMessage(
+        changes: [TranscriptChange]
+    ) -> Guide01StatusMessage {
+        guard !changes.isEmpty else {
+            return Guide01StatusMessage(
+                title: "補正内容",
+                content: "補正による変更なし",
+                fontSize: 20,
+                showsStatusBar: false
+            )
+        }
+
+        let before = changes.map(\.beforeSnippet)
+        let after = changes.map(\.afterSnippet)
+        let sections = zip(before, after).enumerated().map { index, pair in
+            """
+            補正 \(index + 1)/\(changes.count)
+            変更前
+            \(pair.0)
+            変更後
+            \(pair.1)
+            """
+        }
+
+        return Guide01StatusMessage(
+            title: "補正内容",
+            content: sections.joined(separator: "\n"),
+            fontSize: 20,
+            showsStatusBar: false,
+            highlightedTextFragments: after,
+            warningTextFragments: before
+        )
+    }
+
     static func message(for state: HandsFreeState) -> Guide01StatusMessage {
         switch state {
         case .idle:
