@@ -99,4 +99,81 @@ struct GhostPosterTests {
         #expect(title.displayText == "タイトルを入力しました\nタイトルを確定、または修正")
     }
 
+    @Test func guide01ReadAloudMessageShowsConfirmationContentWithoutURL() {
+        let message = Guide01StatusPresenter.readAloudMessage(
+            title: "テストタイトル",
+            body: "一行目\n二行目",
+            hasReferenceURL: true,
+            tags: ["Swift", "日記"]
+        )
+
+        #expect(message.title == "投稿内容")
+        #expect(message.content == """
+        タイトル
+        テストタイトル
+        本文
+        一行目
+        二行目
+        参考URLあり
+        タグ
+        Swift、日記
+        """)
+        #expect(message.content.contains("https://") == false)
+        #expect(message.fontSize == 20)
+        #expect(message.showsStatusBar == false)
+
+        let messageWithoutOptionalContent = Guide01StatusPresenter.readAloudMessage(
+            title: "タイトル",
+            body: "本文",
+            hasReferenceURL: false,
+            tags: []
+        )
+        #expect(messageWithoutOptionalContent.content.contains("参考URLなし"))
+        #expect(messageWithoutOptionalContent.content.hasSuffix("タグ\nなし"))
+    }
+
+    @Test func guide01LongReadAloudMessageScrollsOneLineAtATime() {
+        let message = Guide01StatusMessage(
+            title: "投稿内容",
+            content: "一二三四五六七八九十\n次の行",
+            fontSize: 20
+        )
+        let frames = Guide01StatusPresenter.scrollingMessages(
+            for: message,
+            charactersPerLine: 4,
+            visibleContentLines: 2
+        )
+
+        #expect(frames.map(\.content) == [
+            "一二三四\n五六七八",
+            "五六七八\n九十",
+            "九十\n次の行"
+        ])
+        #expect(frames.allSatisfy { $0.title == "投稿内容" })
+        #expect(frames.allSatisfy { $0.fontSize == 20 })
+        #expect(frames.allSatisfy { $0.showsStatusBar })
+    }
+
+    @Test func guide01ShortReadAloudMessageDoesNotScroll() {
+        let message = Guide01StatusMessage(
+            title: "投稿内容",
+            content: "短い本文",
+            fontSize: 20
+        )
+
+        #expect(Guide01StatusPresenter.scrollingMessages(for: message) == [message])
+    }
+
+    @Test func guide01DefaultScrollFramesStayWithinSafeBLEPayloadSize() {
+        let message = Guide01StatusMessage(
+            title: "投稿内容",
+            content: String(repeating: "日本語の長い本文です。", count: 80),
+            fontSize: 20
+        )
+        let frames = Guide01StatusPresenter.scrollingMessages(for: message)
+
+        #expect(frames.count > 1)
+        #expect(frames.allSatisfy { $0.displayText.utf8.count <= 400 })
+    }
+
 }

@@ -3,6 +3,8 @@ import Foundation
 struct Guide01StatusMessage: Equatable {
     let title: String
     let content: String
+    var fontSize: UInt8 = 32
+    var showsStatusBar = true
 
     var displayText: String {
         "\(title)\n\(content)"
@@ -10,6 +12,64 @@ struct Guide01StatusMessage: Equatable {
 }
 
 enum Guide01StatusPresenter {
+    static func scrollingMessages(
+        for message: Guide01StatusMessage,
+        charactersPerLine: Int = 18,
+        visibleContentLines: Int = 4
+    ) -> [Guide01StatusMessage] {
+        guard charactersPerLine > 0, visibleContentLines > 0 else {
+            return [message]
+        }
+
+        let lines = message.content
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .flatMap { line -> [String] in
+                let characters = Array(line)
+                guard !characters.isEmpty else { return [""] }
+                return stride(from: 0, to: characters.count, by: charactersPerLine)
+                    .map { start in
+                        String(characters[start..<min(start + charactersPerLine, characters.count)])
+                    }
+            }
+
+        guard lines.count > visibleContentLines else { return [message] }
+
+        return (0...(lines.count - visibleContentLines)).map { start in
+            Guide01StatusMessage(
+                title: message.title,
+                content: lines[start..<(start + visibleContentLines)]
+                    .joined(separator: "\n"),
+                fontSize: message.fontSize,
+                showsStatusBar: message.showsStatusBar
+            )
+        }
+    }
+
+    static func readAloudMessage(
+        title: String,
+        body: String,
+        hasReferenceURL: Bool,
+        tags: [String]
+    ) -> Guide01StatusMessage {
+        let urlSummary = hasReferenceURL ? "参考URLあり" : "参考URLなし"
+        let tagSummary = tags.isEmpty ? "なし" : tags.joined(separator: "、")
+
+        return Guide01StatusMessage(
+            title: "投稿内容",
+            content: """
+            タイトル
+            \(title)
+            本文
+            \(body)
+            \(urlSummary)
+            タグ
+            \(tagSummary)
+            """,
+            fontSize: 20,
+            showsStatusBar: false
+        )
+    }
+
     static func message(for state: HandsFreeState) -> Guide01StatusMessage {
         switch state {
         case .idle:

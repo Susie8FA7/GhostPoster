@@ -12,6 +12,7 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
     @Published var tags: [String] = []
     @Published private(set) var statusMessage = "開始ボタンを押すか、Siriから起動してください。"
     @Published private(set) var shouldPost = false
+    @Published private(set) var readAloudRequestID = 0
 
     let voiceInput = VoiceInputManager()
     private let synthesizer = AVSpeechSynthesizer()
@@ -276,13 +277,32 @@ final class HandsFreeSession: NSObject, ObservableObject, AVSpeechSynthesizerDel
     private func readPostAloud() {
         let urlSummary = referenceURL.isEmpty ? "参考URLなし" : "参考URLあり"
         let tagSummary = tags.isEmpty ? "タグなし" : "タグ、\(tags.joined(separator: "、"))"
-        speak("タイトル。\(title)。本文。\(body)。\(urlSummary)。\(tagSummary)。")
+        let speechText = "タイトル。\(title)。本文。\(body)。\(urlSummary)。\(tagSummary)。"
+        readAloudRequestID &+= 1
+        let requestID = readAloudRequestID
+
+        Task { @MainActor [weak self] in
+            // Give GUIDE01 time to render the confirmation content before
+            // speech starts.
+            try? await Task.sleep(for: .milliseconds(800))
+            guard let self,
+                  self.state == .confirmation,
+                  self.readAloudRequestID == requestID else { return }
+            self.speak(speechText)
+        }
     }
 
     private func speak(_ text: String, thenListen: Bool = true) {
         voiceInput.stop()
         synthesizer.stopSpeaking(at: .immediate)
         startsListeningAfterSpeech = thenListen
+        let audioSession = AVAudioSession.sharedInstance()
+        try? audioSession.setCategory(
+            .playback,
+            mode: .spokenAudio,
+            options: [.duckOthers]
+        )
+        try? audioSession.setActive(true, options: .notifyOthersOnDeactivation)
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = AVSpeechSynthesisVoice(language: "ja-JP")
         utterance.rate = 0.48
