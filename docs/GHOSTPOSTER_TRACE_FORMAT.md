@@ -2,7 +2,7 @@
 
 GhostPoster Trace Formatは、GhostPosterの処理状況を外部の観測ツールへ渡すための、ベンダー非依存なJSON形式です。Langfuse固有のIDやAPI構造には依存しません。
 
-現在の実装はDebugビルド限定です。Settingsの「Traceを有効にする」をオンにするとメモリ上へ記録し、同じセクションの「JSONプレビュー」から内容を確認できます。Releaseビルドでは記録しません。
+現在の実装はDebugビルド限定です。Settingsの「Traceを有効にする」をオンにするとメモリ上へ記録し、同じセクションの「JSONプレビュー」から内容を確認できます。「Trace JSONを共有」では一時JSONファイルを生成し、AirDropやファイル保存でMacへ渡せます。共有シートを閉じると一時ファイルを削除します。Releaseビルドでは記録しません。
 
 ## プライバシー方針
 
