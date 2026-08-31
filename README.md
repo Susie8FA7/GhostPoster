@@ -94,9 +94,18 @@ JSONには、次のメタデータを記録します。
 - 読み上げ操作
 - Ghost下書き作成の開始・成功・失敗
 
-タイトル、本文、補正前後の文字列、参考URL、タグ、認証情報は含みません。Trace機能とJSONプレビューはDebugビルド限定で、Settingsの「Traceを有効にする」をオンにした場合だけ動作します。現段階では端末のメモリ上でJSONを生成するだけで、外部サービスへの送信やファイルへの永続化は行いません。
+タイトル、本文、補正前後の文字列、参考URL、タグ、認証情報は含みません。Trace機能、JSONプレビュー、JSON共有はDebugビルド限定で、Settingsの「Traceを有効にする」をオンにした場合だけ動作します。「Trace JSONを共有」からAirDropやファイル保存でMacへ渡せます。共有用ファイルは一時領域へ生成し、共有シートを閉じると削除します。外部サービスへ自動送信することはありません。
 
 形式の詳細は[`docs/GHOSTPOSTER_TRACE_FORMAT.md`](docs/GHOSTPOSTER_TRACE_FORMAT.md)を参照してください。
+
+Macへ共有したJSONは[`Tools/GhostPosterTraceImporter`](Tools/GhostPosterTraceImporter)のCLIで検証・集計できます。
+
+```sh
+cd Tools/GhostPosterTraceImporter
+swift run ghostposter-trace-import /path/to/ghostposter-trace-YYYYMMDD-HHMMSS.json
+```
+
+Importerでは送信内容を`--dry-run`で確認した後、`--send`でLangfuse v4のOpenTelemetryエンドポイントへ送信できます。Langfuse API KeyはGhostPosterやリポジトリへ保存せず、MacのKeychainで管理します。
 
 ## Ghost下書きの形式
 

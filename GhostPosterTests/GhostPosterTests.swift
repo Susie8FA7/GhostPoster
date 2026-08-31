@@ -336,4 +336,31 @@ struct GhostPosterTests {
         #expect(recorder.document().sessions.isEmpty)
     }
 
+#if DEBUG
+    @Test func traceExporterCreatesShareableJSONFile() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let data = Data(#"{"format":"ghostposter-trace"}"#.utf8)
+        let date = Date(timeIntervalSince1970: 1_788_220_800)
+        let url = try GhostPosterTraceExporter.createFile(
+            data: data,
+            generatedAt: date,
+            directory: directory
+        )
+
+        #expect(url.pathExtension == "json")
+        #expect(url.lastPathComponent.hasPrefix("ghostposter-trace-"))
+        #expect(try Data(contentsOf: url) == data)
+
+        GhostPosterTraceExporter.removeFile(at: url)
+        #expect(FileManager.default.fileExists(atPath: url.path) == false)
+    }
+#endif
+
 }

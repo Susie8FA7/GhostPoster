@@ -1,10 +1,15 @@
 import SwiftUI
+#if DEBUG
+import UIKit
+#endif
 
 struct SettingsView: View {
     @ObservedObject var settings: GhostSettings
     @State private var connectionState: ConnectionState = .idle
 #if DEBUG
     @ObservedObject private var traceRecorder = GhostPosterTraceRecorder.shared
+    @State private var traceExportFile: TraceExportFile?
+    @State private var traceExportError: String?
 #endif
 
     var body: some View {
@@ -157,6 +162,13 @@ struct SettingsView: View {
                         TraceDebugView(recorder: traceRecorder)
                     }
 
+                    Button {
+                        prepareTraceExport()
+                    } label: {
+                        Label("Trace JSONを共有", systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(traceRecorder.document().sessions.isEmpty)
+
                     Button("Traceを消去", role: .destructive) {
                         traceRecorder.clear()
                     }
@@ -169,12 +181,40 @@ struct SettingsView: View {
 #endif
         }
         .navigationTitle("Settings")
+#if DEBUG
+        .sheet(item: $traceExportFile) { file in
+            TraceShareSheet(fileURL: file.url)
+        }
+        .alert(
+            "Trace JSONを書き出せません",
+            isPresented: Binding(
+                get: { traceExportError != nil },
+                set: { if !$0 { traceExportError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                traceExportError = nil
+            }
+        } message: {
+            Text(traceExportError ?? "不明なエラーです。")
+        }
+#endif
     }
 
 #if DEBUG
     private var traceEventCount: Int {
         traceRecorder.document().sessions.reduce(0) {
             $0 + $1.events.count
+        }
+    }
+
+    private func prepareTraceExport() {
+        do {
+            let data = try traceRecorder.encodedDocument()
+            let url = try GhostPosterTraceExporter.createFile(data: data)
+            traceExportFile = TraceExportFile(url: url)
+        } catch {
+            traceExportError = error.localizedDescription
         }
     }
 #endif
@@ -215,6 +255,57 @@ struct SettingsView: View {
 }
 
 #if DEBUG
+private struct TraceExportFile: Identifiable {
+    let url: URL
+    var id: URL { url }
+}
+
+private struct TraceShareSheet: UIViewControllerRepresentable {
+    let fileURL: URL
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(fileURL: fileURL)
+    }
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: [fileURL],
+            applicationActivities: nil
+        )
+        controller.completionWithItemsHandler = { _, _, _, _ in
+            context.coordinator.cleanup()
+        }
+        return controller
+    }
+
+    func updateUIViewController(
+        _ uiViewController: UIActivityViewController,
+        context: Context
+    ) {}
+
+    static func dismantleUIViewController(
+        _ uiViewController: UIActivityViewController,
+        coordinator: Coordinator
+    ) {
+        coordinator.cleanup()
+    }
+
+    final class Coordinator {
+        private let fileURL: URL
+        private var didCleanUp = false
+
+        init(fileURL: URL) {
+            self.fileURL = fileURL
+        }
+
+        func cleanup() {
+            guard !didCleanUp else { return }
+            didCleanUp = true
+            GhostPosterTraceExporter.removeFile(at: fileURL)
+        }
+    }
+}
+
 private struct TraceDebugView: View {
     @ObservedObject var recorder: GhostPosterTraceRecorder
 
