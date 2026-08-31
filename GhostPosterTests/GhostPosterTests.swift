@@ -132,7 +132,7 @@ struct GhostPosterTests {
         ))
         #expect(confirmation == Guide01StatusMessage(
             title: "最終確認",
-            content: "投稿、読み上げ、またはキャンセル"
+            content: "投稿、読み上げ、項目修正、またはキャンセル"
         ))
         #expect(title.displayText == "タイトルを入力しました\nタイトルを確定、または修正")
     }
@@ -269,6 +269,12 @@ struct GhostPosterTests {
         #expect(change.afterSnippet.contains("Apple Intelligence"))
     }
 
+    @Test func finalConfirmationRevisionCommandsAreRecognized() {
+        #expect(HandsFreeCommand(transcript: "タイトル修正") == .reviseTitle)
+        #expect(HandsFreeCommand(transcript: "本文を修正。") == .reviseBody)
+        #expect(HandsFreeCommand(transcript: "タグ 修正") == .reviseTags)
+    }
+
     @Test func guide01CorrectionMessageShowsBeforeAndAfterOnly() {
         let change = TranscriptChange(
             scope: .body,
@@ -281,6 +287,53 @@ struct GhostPosterTests {
         #expect(message.content.contains("変更後\nApple Intelligence"))
         #expect(message.warningTextFragments == ["Appleインテリジェンス"])
         #expect(message.highlightedTextFragments == ["Apple Intelligence"])
+    }
+
+    @MainActor
+    @Test func traceRecorderGeneratesVersionedMetadataOnlyJSON() throws {
+        let timestamp = Date(timeIntervalSince1970: 1_788_131_200)
+        let recorder = GhostPosterTraceRecorder(now: { timestamp })
+
+        recorder.beginSession()
+        recorder.record(
+            name: "transcript_corrected",
+            state: "body",
+            scope: "body",
+            correctionSource: "foundation_models",
+            changed: true,
+            inputCharacterCount: 18,
+            outputCharacterCount: 19,
+            durationMilliseconds: 420
+        )
+        recorder.finishSession(outcome: "succeeded")
+
+        let document = recorder.document()
+        let session = try #require(document.sessions.first)
+        let correction = try #require(
+            session.events.first { $0.name == "transcript_corrected" }
+        )
+
+        #expect(document.format == "ghostposter-trace")
+        #expect(document.formatVersion == "1.0")
+        #expect(session.outcome == "succeeded")
+        #expect(correction.inputCharacterCount == 18)
+        #expect(correction.outputCharacterCount == 19)
+
+        let data = try recorder.encodedDocument()
+        let json = try #require(String(data: data, encoding: .utf8))
+        #expect(json.contains("foundation_models"))
+        #expect(json.contains("format_version"))
+        #expect(json.contains("本文そのもの") == false)
+    }
+
+    @MainActor
+    @Test func disabledTraceRecorderDoesNotCreateSessions() {
+        let recorder = GhostPosterTraceRecorder(isEnabled: false)
+
+        recorder.beginSession()
+        recorder.record(name: "state_changed", state: "title")
+
+        #expect(recorder.document().sessions.isEmpty)
     }
 
 }

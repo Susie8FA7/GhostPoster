@@ -164,7 +164,7 @@ enum Guide01StatusPresenter {
         case .confirmation:
             Guide01StatusMessage(
                 title: "最終確認",
-                content: "投稿、読み上げ、またはキャンセル"
+                content: "投稿、読み上げ、項目修正、またはキャンセル"
             )
         case .posting:
             Guide01StatusMessage(

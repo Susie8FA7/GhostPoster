@@ -3,6 +3,9 @@ import Foundation
 enum HandsFreeCommand: Equatable {
     case addBody
     case redoTitle
+    case reviseTitle
+    case reviseBody
+    case reviseTags
     case accept
     case revise
     case readAloud
@@ -21,6 +24,9 @@ enum HandsFreeCommand: Equatable {
         switch value {
         case "本文追加", "追加": self = .addBody
         case "タイトルやり直し", "タイトルをやり直し": self = .redoTitle
+        case "タイトル修正", "タイトルを修正": self = .reviseTitle
+        case "本文修正", "本文を修正": self = .reviseBody
+        case "タグ修正", "タグを修正": self = .reviseTags
         case "確定": self = .accept
         case "修正", "やり直し": self = .revise
         case "読み上げ": self = .readAloud
