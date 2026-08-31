@@ -1,7 +1,7 @@
 import Foundation
 
 struct TranscriptChange: Equatable, Sendable {
-    enum Scope: Equatable, Sendable {
+    enum Scope: String, Equatable, Sendable {
         case title
         case body
         case tags

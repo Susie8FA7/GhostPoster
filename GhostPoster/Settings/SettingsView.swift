@@ -3,6 +3,9 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var settings: GhostSettings
     @State private var connectionState: ConnectionState = .idle
+#if DEBUG
+    @ObservedObject private var traceRecorder = GhostPosterTraceRecorder.shared
+#endif
 
     var body: some View {
         Form {
@@ -129,9 +132,52 @@ struct SettingsView: View {
                 }
                 .font(.footnote)
             }
+
+#if DEBUG
+            Section {
+                Toggle(
+                    "Traceを有効にする",
+                    isOn: Binding(
+                        get: { traceRecorder.isEnabled },
+                        set: { traceRecorder.setEnabled($0) }
+                    )
+                )
+
+                if traceRecorder.isEnabled {
+                    LabeledContent(
+                        "セッション",
+                        value: "\(traceRecorder.document().sessions.count)"
+                    )
+                    LabeledContent(
+                        "イベント",
+                        value: "\(traceEventCount)"
+                    )
+
+                    NavigationLink("JSONプレビュー") {
+                        TraceDebugView(recorder: traceRecorder)
+                    }
+
+                    Button("Traceを消去", role: .destructive) {
+                        traceRecorder.clear()
+                    }
+                }
+            } header: {
+                Text("Trace Debug")
+            } footer: {
+                Text("Debugビルド限定です。本文、タイトル、URL、タグ、認証情報は記録しません。")
+            }
+#endif
         }
         .navigationTitle("Settings")
     }
+
+#if DEBUG
+    private var traceEventCount: Int {
+        traceRecorder.document().sessions.reduce(0) {
+            $0 + $1.events.count
+        }
+    }
+#endif
 
     private var canTestConnection: Bool {
         hasRequiredCredentials && !connectionState.isTesting
@@ -167,6 +213,29 @@ struct SettingsView: View {
         }
     }
 }
+
+#if DEBUG
+private struct TraceDebugView: View {
+    @ObservedObject var recorder: GhostPosterTraceRecorder
+
+    var body: some View {
+        ScrollView([.horizontal, .vertical]) {
+            Text(recorder.formattedDocument())
+                .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+        }
+        .navigationTitle("Trace JSON")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            Button("消去", role: .destructive) {
+                recorder.clear()
+            }
+        }
+    }
+}
+#endif
 
 private enum ConnectionState {
     case idle
