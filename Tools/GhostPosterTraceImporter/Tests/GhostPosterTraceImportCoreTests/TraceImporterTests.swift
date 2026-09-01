@@ -67,6 +67,51 @@ final class TraceImporterTests: XCTestCase {
         XCTAssertFalse(json.contains("reference_url"))
     }
 
+    func testDerivesDurationPhaseSpansFromStateChanges() throws {
+        let document = try TraceImporter.decode(Data(Self.phaseTrace.utf8))
+        let payload = OpenTelemetryMapper.map(document)
+        let spans = try XCTUnwrap(
+            payload.resourceSpans.first?.scopeSpans.first?.spans
+        )
+
+        XCTAssertFalse(spans.contains { $0.name == "ghostposter.state_changed" })
+
+        let title = try XCTUnwrap(
+            spans.first { $0.name == "ghostposter.phase.title_review" }
+        )
+        XCTAssertEqual(
+            UInt64(title.endTimeUnixNano)! - UInt64(title.startTimeUnixNano)!,
+            10_000_000_000
+        )
+        XCTAssertEqual(
+            stringAttribute("ghostposter.phase.state", in: title),
+            "titleReview"
+        )
+        XCTAssertEqual(
+            stringAttribute("ghostposter.phase.time_classification", in: title),
+            "mixed_user_and_system"
+        )
+
+        let posting = try XCTUnwrap(
+            spans.first { $0.name == "ghostposter.phase.posting" }
+        )
+        XCTAssertEqual(
+            UInt64(posting.endTimeUnixNano)! - UInt64(posting.startTimeUnixNano)!,
+            3_000_000_000
+        )
+        XCTAssertEqual(
+            stringAttribute("ghostposter.phase.time_classification", in: posting),
+            "system_time"
+        )
+
+        XCTAssertTrue(
+            spans.contains { $0.name == "ghostposter.phase.reference_url_review" }
+        )
+        XCTAssertFalse(
+            spans.contains { $0.name.contains("reference_u_r_l") }
+        )
+    }
+
     func testLangfuseRequestUsesV4OpenTelemetryEndpoint() throws {
         let document = try TraceImporter.decode(Data(Self.validTrace.utf8))
         let configuration = LangfuseConfiguration(
@@ -112,6 +157,10 @@ final class TraceImporterTests: XCTestCase {
         XCTAssertEqual(configuration.secretKey, "sk-lf-env")
     }
 
+    private func stringAttribute(_ key: String, in span: OTLPSpan) -> String? {
+        span.attributes.first { $0.key == key }?.value.stringValue
+    }
+
     private static let validTrace = #"""
     {
       "format": "ghostposter-trace",
@@ -143,6 +192,40 @@ final class TraceImporterTests: XCTestCase {
             "timestamp": "2026-08-31T00:01:00Z",
             "name": "session_finished",
             "outcome": "succeeded"
+          }
+        ]
+      }]
+    }
+    """#
+
+    private static let phaseTrace = #"""
+    {
+      "format": "ghostposter-trace",
+      "format_version": "1.0",
+      "generated_at": "2026-09-01T00:00:15Z",
+      "sessions": [{
+        "id": "00000000-0000-0000-0000-000000000002",
+        "started_at": "2026-09-01T00:00:00Z",
+        "ended_at": "2026-09-01T00:00:15Z",
+        "outcome": "succeeded",
+        "events": [
+          {
+            "sequence": 1,
+            "timestamp": "2026-09-01T00:00:00Z",
+            "name": "state_changed",
+            "state": "titleReview"
+          },
+          {
+            "sequence": 2,
+            "timestamp": "2026-09-01T00:00:10Z",
+            "name": "state_changed",
+            "state": "referenceURLReview"
+          },
+          {
+            "sequence": 3,
+            "timestamp": "2026-09-01T00:00:12Z",
+            "name": "state_changed",
+            "state": "posting"
           }
         ]
       }]

@@ -105,7 +105,7 @@ cd Tools/GhostPosterTraceImporter
 swift run ghostposter-trace-import /path/to/ghostposter-trace-YYYYMMDD-HHMMSS.json
 ```
 
-Importerでは送信内容を`--dry-run`で確認した後、`--send`でLangfuse v4のOpenTelemetryエンドポイントへ送信できます。Langfuse API KeyはGhostPosterやリポジトリへ保存せず、MacのKeychainで管理します。
+Importerでは送信内容を`--dry-run`で確認した後、`--send`でLangfuse v4のOpenTelemetryエンドポイントへ送信できます。Trace Format 1.0の状態遷移はImporter側で滞在時間を持つ`ghostposter.phase.*` Spanへ変換されるため、iPhone側の形式を変更せずLangfuseのタイムラインで各Phaseの所要時間を確認できます。Langfuse API KeyはGhostPosterやリポジトリへ保存せず、MacのKeychainで管理します。
 
 ## Ghost下書きの形式
 
