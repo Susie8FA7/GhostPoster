@@ -44,6 +44,10 @@ swift run ghostposter-trace-import /path/to/trace.json --dry-run
 
 1つのGhostPosterセッションを1つのTraceへ変換し、各イベントをルートSpan配下の子Spanとして生成します。
 
+Trace Format 1.0の`state_changed`は、次の状態遷移までの時間を持つPhase SpanへImporter側で変換します。たとえば`titleReview`は`ghostposter.phase.title_review`になります。生の`state_changed`点Spanは重複表示を避けるため送信しません。
+
+`posting`と`completed`は`system_time`、それ以外は現時点では`mixed_user_and_system`として分類します。この分類は粗い状態別プロファイル用であり、発話時間や無音待機などの詳細な内訳はTrace Formatの将来版で扱います。
+
 ## Langfuseへ送信
 
 ```sh

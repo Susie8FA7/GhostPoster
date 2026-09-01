@@ -144,7 +144,8 @@ public enum OpenTelemetryMapper {
             status: status(for: session.outcome)
         )
 
-        let children = session.events.map { event in
+        let eventSpans = session.events.compactMap { event -> OTLPSpan? in
+            guard event.name != "state_changed" else { return nil }
             let start: Date
             let end: Date
             if let durationMilliseconds = event.durationMilliseconds {
@@ -168,7 +169,100 @@ public enum OpenTelemetryMapper {
                 status: status(for: event.outcome)
             )
         }
+        let phaseSpans = makePhaseSpans(
+            for: session,
+            traceID: traceID,
+            rootSpanID: rootSpanID,
+            commonAttributes: commonAttributes,
+            sessionEnd: rootEnd
+        )
+        let children = (phaseSpans + eventSpans).sorted {
+            $0.startTimeUnixNano < $1.startTimeUnixNano
+        }
         return [root] + children
+    }
+
+    private static func makePhaseSpans(
+        for session: TraceSession,
+        traceID: String,
+        rootSpanID: String,
+        commonAttributes: [OTLPAttribute],
+        sessionEnd: Date
+    ) -> [OTLPSpan] {
+        let transitions = session.events.filter {
+            $0.name == "state_changed" && $0.state != nil
+        }
+
+        return transitions.enumerated().map { index, event in
+            let start = event.timestamp
+            let nextTransition = transitions.indices.contains(index + 1)
+                ? transitions[index + 1].timestamp
+                : sessionEnd
+            let end = nextTransition > start
+                ? nextTransition
+                : start.addingTimeInterval(0.001)
+            let state = event.state ?? "unknown"
+            let durationMilliseconds = max(
+                1,
+                Int((end.timeIntervalSince(start) * 1_000).rounded())
+            )
+
+            return OTLPSpan(
+                traceId: traceID,
+                spanId: spanID(for: "\(session.id.uuidString):phase:\(event.sequence)"),
+                parentSpanId: rootSpanID,
+                name: "ghostposter.phase.\(snakeCase(state))",
+                kind: 1,
+                startTimeUnixNano: unixNanoseconds(start),
+                endTimeUnixNano: unixNanoseconds(end),
+                attributes: commonAttributes + optionalAttributes([
+                    ("ghostposter.event.sequence", .int(event.sequence)),
+                    ("ghostposter.phase.state", .string(state)),
+                    (
+                        "ghostposter.phase.time_classification",
+                        .string(timeClassification(for: state))
+                    ),
+                    ("ghostposter.duration_milliseconds", .int(durationMilliseconds))
+                ]),
+                status: status(for: event.outcome)
+            )
+        }
+    }
+
+    private static func snakeCase(_ value: String) -> String {
+        var result = ""
+        let characters = Array(value)
+        for index in characters.indices {
+            let character = characters[index]
+            let previous = index > characters.startIndex
+                ? characters[characters.index(before: index)]
+                : nil
+            let next = characters.indices.contains(index + 1)
+                ? characters[index + 1]
+                : nil
+            let startsWord = character.isUppercase
+                && previous != nil
+                && previous != "_"
+                && (
+                    previous?.isLowercase == true
+                    || previous?.isNumber == true
+                    || next?.isLowercase == true
+                )
+            if startsWord {
+                result.append("_")
+            }
+            result.append(contentsOf: character.lowercased())
+        }
+        return result
+    }
+
+    private static func timeClassification(for state: String) -> String {
+        switch snakeCase(state) {
+        case "posting", "completed":
+            "system_time"
+        default:
+            "mixed_user_and_system"
+        }
     }
 
     private static func traceAttributes(
